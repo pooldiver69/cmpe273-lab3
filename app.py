@@ -5,11 +5,13 @@ from flask import Flask, request, jsonify
 type_defs = """
     type Query {
         students(id: ID!): printStudent!
+        classes(id: ID!): printClass!
     }
 
     type Mutation {
-        addStudent(input: student!, id: ID!): Boolean
+        createStudent(input: student!, id: ID!): Boolean
         createClass(input: class!, id: ID!): Boolean
+        addStudentToclass(student_id: ID!, class_id: ID!): Boolean
     }
 
     input student {
@@ -18,30 +20,47 @@ type_defs = """
 
     input class {
         name: String!
-        students!: student!
     }
 
     type printStudent {
         name: String!
     }
 
-
+    type printClass {
+        name: String!
+        students: [printStudent]!
+    }
 """
 
 students = {}
+classes = {}
 
 query = QueryType()
 
 @query.field("students")
-def resolve_getStudent(_, info, id):
+def resolve_students(_, info, id):
     return students[id]
-
+    
+@query.field("classes")
+def resolve_classes(_, info, id):
+    return classes[id]
 
 mutation = MutationType()
-@mutation.field('addStudent')
-def resolve_addStudent(_, info, input, id):
-    print(input)
+@mutation.field('createStudent')
+def resolve_createStudent(_, info, input, id):
+    # print(input)
     students[id] = input
+    return True
+
+@mutation.field('createClass')
+def resolve_createClass(_, info, input, id):
+    input['students'] = []
+    classes[id] = input
+    return True
+
+@mutation.field('addStudentToclass')
+def resolve_addStudentToclass(_, info, student_id, class_id):
+    classes[class_id]['students'].append(students[student_id])
     return True
 
 schema = make_executable_schema(type_defs, [query, mutation])
